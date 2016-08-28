@@ -9,7 +9,7 @@ mongoose.connect('mongodb://localhost/playlist');
 var app = express();
 
 app.use(cors());
-app.use(bodyParse.json({ extended: false }));
+app.use(bodyParse.json());
 
 var PlaylistSchema = new mongoose.Schema({
 	name: String,
@@ -19,6 +19,7 @@ var PlaylistSchema = new mongoose.Schema({
 	upVotes: Number,
 	downVotes: Number,
 	songs: [{
+		title: String,
 		artist: String,
 		songURL: String,
 		album: String,
@@ -36,7 +37,7 @@ playlist1.save();
 var playlist2 = new playlist(samplePlaylist.playlist2);
 playlist2.save();*/
 
-app.post("/api/addplaylist", function(req, res, next) {
+app.post("/api/playlist", function(req, res, next) {
 	var newPlaylist = new playlist(req.query);
 	newPlaylist.save(function (error, post) {
 		if (error) {
@@ -46,15 +47,25 @@ app.post("/api/addplaylist", function(req, res, next) {
 	})
 });
 
-app.post("/api/addsong", function(req, res, next) {
-	console.log('-=-=-=-=-=-=-=-=->', req.query);
-	playlist.findById(req.query._id, function(error, data) {
+app.put("/api/playlist/:id/song", function(req, res, next) {
+	//console.log('-=-=-=-=-=-=-=-=->', req.query);
+	
+	/*playlist.findById(req.params.id, function(error, data) {
 		if (error) {
 			res.send(error);
 		}
-		console.log("+_+_+_+_+_+_+>>>>", data)
-		data.songs.push(req.query.song);
+		//console.log("+_+_+_+_+_+_+>>>>", data)
+		console.log(req.body.song);
+		data.songs.push(req.body.song);
 		data.save();
+		res.end();
+	});
+	*/
+	playlist.update({_id: req.params.id}, {$push: {songs: req.body}}	, 
+		(error, numAffected) => {
+		if (error) {
+			res.send(error);
+		}
 		res.end();
 	});
 });
