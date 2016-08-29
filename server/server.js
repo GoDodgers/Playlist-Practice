@@ -13,21 +13,15 @@ app.use(bodyParse.json());
 
 var PlaylistSchema = new mongoose.Schema({
 	name: String,
-	discription: String,
-	limit: Number,
+	description: String,
+	limit: { type: Number, default: 25 },
 	expiration: { type: Number, default: 604800 },
-	upVotes: Number,
-	downVotes: Number,
 	songs: [{
 		title: String,
-		artist: String,
 		songURL: String,
-		album: String,
-		albumURL: String,
 		upVotes: Number,
 		downVotes: Number
 	}]
-
 }, { collection: 'PlaylistCollection' });
 
 var playlist = mongoose.model('playlist', PlaylistSchema);
@@ -37,41 +31,39 @@ playlist1.save();
 var playlist2 = new playlist(samplePlaylist.playlist2);
 playlist2.save();*/
 
-app.post("/api/playlist", function(req, res, next) {
+app.post("/db/playlists/create", function(req, res, next) {
+	console.log("PL create req body", req.body);
+	console.log("PL create req query", req.query);
 	var newPlaylist = new playlist(req.query);
 	newPlaylist.save(function (error, post) {
 		if (error) {
-			return next(error)
+			return next(error);
 		}
-		res.json(201, post)
+		res.json(201, post);
 	})
 });
 
-app.put("/api/playlist/:id/song", function(req, res, next) {
-	//console.log('-=-=-=-=-=-=-=-=->', req.query);
-	
-	/*playlist.findById(req.params.id, function(error, data) {
+app.get("/db/playlists/getAll", function(req, res) {
+	playlist.find(function(error, data) {
 		if (error) {
 			res.send(error);
 		}
-		//console.log("+_+_+_+_+_+_+>>>>", data)
-		console.log(req.body.song);
-		data.songs.push(req.body.song);
-		data.save();
-		res.end();
-	});
-	*/
-	playlist.update({_id: req.params.id}, {$push: {songs: req.body}}	, 
-		(error, numAffected) => {
-		if (error) {
-			res.send(error);
-		}
-		res.end();
+		res.json(200, data);
 	});
 });
 
+app.get("/db/playlists/:id", function(req, res) {
+	playlist.findById(req.params.id, function(error, data) {
+		if (error) {
+			res.send(error);
+		}
+		res.json(200, data);
+	});
+});
+
+
 /*
-playlist.findById("57c1ca92c014f1c8219acc8a",function(error, data) {
+playlist.findById("57c1ca92c014f1c8219acc8a", function(error, data) {
 	if (error) {
 		console.error(error);
 	}
@@ -81,30 +73,35 @@ playlist.findById("57c1ca92c014f1c8219acc8a",function(error, data) {
 	console.log(data);
 });*/
 
-app.get("/api/playlist", function(req, res) {
-	playlist.find(function(error, data) {
+//adds a new song in songs array
+app.post("/db/playlists/:id/song/add", function(req, res, next) {
+	playlist.update({ _id: req.params.id }, { $push: { songs: req.body }}, 
+		function(error, numAffected) {
 		if (error) {
 			res.send(error);
+		} else {
+			res.json(201, numAffected);	
 		}
-		res.json(data);
 	});
 });
 
-app.get("/api/playlist/:id", function(req, res) {
-	playlist.findById(req.params.id, function(error, data) {
-		if (error) {
-			res.send(error);
-		}
-		res.json(data);
-	});
+//removes a song from playlist, needs playlist ID && song ID in query params
+app.post("/db/playlists/song/remove", function(req, res) {
+	playlist.update({ _id: req.body.listID }, { $pull:{ "songs": { _id: req.body.songID }}}, 
+		function(error, numAffected) {
+			if (error) {
+				res.send(error);
+			}
+			res.json(201, numAffected);
+		});
 });
 
-app.delete("/api/playlist/:id", function(req, res) {
-	playlist.remove({_id: req.params.id}, function (error, count) {
+//deletes a playlist based on playlist id and sends back remaining playlist
+app.delete("/db/playlists/:id", function(req, res) {
+	playlist.remove({ _id: req.params.id }, function(error, count) {
 		if (error) {
 			res.send(error);
 		}
-		console.log(count);
 		playlist.find(function(error, data) {
 			if (error) {
 				res.send(error);
